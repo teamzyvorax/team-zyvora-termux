@@ -2,7 +2,7 @@ TERMUX_PKG_HOMEPAGE=https://github.com/teamzyvorax/team-zyvora-termux
 TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk terminal theme with 28 themes and 102 randomized banner designs for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
-TERMUX_PKG_VERSION=1.2.0
+TERMUX_PKG_VERSION=1.3.0
 TERMUX_PKG_REVISION=1
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
@@ -27,6 +27,7 @@ ZSHRC="$HOME/.zshrc"
 BACKUP="$HOME/.zshrc.zyvora-backup"
 CONFIG_DIR="$HOME/.config/zyvora"
 STYLE_FILE="$CONFIG_DIR/style"
+EFFECTS_FILE="$CONFIG_DIR/effects"
 MARKER="# ZYVORA TERMUX PACKAGE"
 
 styles() {
@@ -138,6 +139,23 @@ case "${1:-start}" in
     styles|list)
         styles
         ;;
+    effects)
+        mkdir -p "$CONFIG_DIR"
+        case "\${2:-status}" in
+            full|light|off)
+                printf '%s\n' "$2" > "$EFFECTS_FILE"
+                printf 'Startup effects set to: %s\n' "$2"
+                ;;
+            status)
+                printf 'Startup effects: '
+                cat "$EFFECTS_FILE" 2>/dev/null || printf 'full (default)\n'
+                ;;
+            *)
+                printf 'Use: zyvora effects <full|light|off>\n'
+                exit 2
+                ;;
+        esac
+        ;;
     style)
         install_theme
         [ -n "${2:-}" ] || { printf 'Current style: '; cat "$STYLE_FILE"; printf '\nUse: zyvora style <1-28|name>\n'; exit 0; }
@@ -193,7 +211,7 @@ case "${1:-start}" in
         fi
         ;;
     *)
-        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>|banner <1-102|random|list|preview N>]\n'
+        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>|banner <1-102|random|list|preview N>|effects <full|light|off>]\n'
         exit 2
         ;;
 esac
@@ -250,7 +268,33 @@ zyvora_git_branch() {
 
 source "$PREFIX/share/zyvora/banners.zsh"
 
+zyvora_boot_sequence() {
+  local mode step filled bar n
+  mode="$(cat "$HOME/.config/zyvora/effects" 2>/dev/null || printf full)"
+  [[ "$mode" == off ]] && return 0
+  print -P "%F{51}╔══════════════════════════════════════╗%f"
+  print -P "%F{141}║       NAGI × ZYVORA ULTRA BOOT       ║%f"
+  print -P "%F{51}╚══════════════════════════════════════╝%f"
+  print -P "%F{226}[BOOT] Initializing terminal interface...%f"
+  if [[ "$mode" == full ]]; then
+    for step in 1 2 3 4 5 6; do
+      filled=$((step * 4))
+      bar=""
+      for ((n=0; n<filled; n++)); do bar+="█"; done
+      printf '\r\033[38;5;51m[%-24s] %3d%%\033[0m' "$bar" "$((step * 100 / 6))"
+      sleep 0.12
+    done
+    printf '\n'
+  else
+    print -P "%F{46}[✓] Core ready%f"
+  fi
+  print -P "%F{46}[✓] Terminal ready%f"
+  sleep 0.15
+}
+
 zyvora_banner() {
+  clear
+  zyvora_boot_sequence
   clear
   zyvora_render_banner
   print -P "%F{$ZYVORA_C2}[*] STYLE: $ZYVORA_STYLE%f"
