@@ -3,10 +3,18 @@ TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk theme and terminal launcher for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
 TERMUX_PKG_VERSION=1.0.1
-TERMUX_PKG_REVISION=1
+TERMUX_PKG_REVISION=2
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
 TERMUX_PKG_DEPENDS="zsh, git"
+
+# This package has no upstream source archive. The Termux license installer
+# searches TERMUX_PKG_SRCDIR, so explicitly create the source tree and place
+# the package's MIT license there.
+termux_step_get_source() {
+    mkdir -p "$TERMUX_PKG_SRCDIR"
+    cp "$TERMUX_PKG_BUILDER_DIR/LICENSE" "$TERMUX_PKG_SRCDIR/LICENSE"
+}
 
 termux_step_make_install() {
     mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora"
