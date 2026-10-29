@@ -62,6 +62,18 @@ styles() {
 LIST
 }
 
+banner_list() {
+    local id layout variant
+    local -a names=(NAGI-ULTRA ZYVORA-CORE MATRIX-GRID CYBER-NEON QUANTUM-VOID DARK-OPS PIXEL-ARCADE AI-SENTINEL RETRO-SHELL GALAXY-NODE)
+    local -a layouts=(framed-console status-panel diamond-mark boxed-grid identity-card command-line pixel-block ascii-emblem retro-divider system-panel)
+    printf '01  giant-zyvora\n02  giant-nagi-ultra\n'
+    for ((id=3; id<=102; id++)); do
+        layout=$(( (id - 3) % 10 ))
+        variant=$(( (id - 3) / 10 ))
+        printf '%02d  %-16s %s\n' "$id" "${names[$variant]}" "${layouts[$layout]}"
+    done
+}
+
 install_theme() {
     mkdir -p "$CONFIG_DIR"
     [ -f "$STYLE_FILE" ] || printf 'zyvora-ultra\n' > "$STYLE_FILE"
@@ -146,8 +158,8 @@ case "${1:-start}" in
         mkdir -p "$CONFIG_DIR"
         case "${2:-status}" in
             list|styles)
-                printf '102 banner designs: 01-02 giant ASCII banners; 03-102 unique layout/motif combinations.\n'
-                printf 'Use: zyvora banner <1-102|random>\n'
+                banner_list
+                printf '\nUse: zyvora banner <1-102|random|preview N>\n'
                 ;;
             random)
                 printf 'random\n' > "$BANNER_FILE"
