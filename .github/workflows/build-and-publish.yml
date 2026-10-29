@@ -36,7 +36,16 @@ jobs:
       - name: Build ZYVORA package in official Termux Docker environment
         working-directory: ${{ env.TERMUX_BUILD_DIR }}
         run: |
-          ./scripts/run-docker.sh ./build-package.sh -f -I zyvora
+          set -o pipefail
+          ./scripts/run-docker.sh ./build-package.sh -f -I zyvora 2>&1 | tee "$GITHUB_WORKSPACE/zyvora-build.log"
+
+      - name: Show build diagnostics on failure
+        if: failure()
+        run: |
+          echo '===== ZYVORA BUILD LOG (last 200 lines) ====='
+          tail -n 200 zyvora-build.log || true
+          echo '===== PRODUCED DEB FILES ====='
+          find "$TERMUX_BUILD_DIR" -type f -name '*.deb' -print || true
 
       - name: Build APT repository
         shell: bash
@@ -52,14 +61,11 @@ jobs:
           debs=("$TERMUX_BUILD_DIR"/output/zyvora_*.deb)
           if [ "${#debs[@]}" -eq 0 ]; then
             echo "ERROR: no ZYVORA .deb was produced" >&2
-            find "$TERMUX_BUILD_DIR" -maxdepth 4 -type f -name '*.deb' -print >&2 || true
+            find "$TERMUX_BUILD_DIR" -type f -name '*.deb' -print >&2 || true
             exit 1
           fi
           cp "${debs[@]}" "$SITE_DIR/apt/pool/main/z/zyvora/"
 
-          # Termux clients request architecture-specific indexes even when the
-          # package itself is Architecture: all. Publish the same all-package
-          # index at every supported Termux architecture path.
           for arch in aarch64 arm i686 x86_64 all; do
             mkdir -p "$SITE_DIR/apt/dists/stable/main/binary-$arch"
             dpkg-scanpackages -a all "$SITE_DIR/apt/pool/main" /dev/null \
