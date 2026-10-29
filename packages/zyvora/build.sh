@@ -3,39 +3,76 @@ TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk theme and terminal launcher for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
 TERMUX_PKG_VERSION=1.0.0
-TERMUX_PKG_REVISION=1
+TERMUX_PKG_REVISION=2
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
-TERMUX_PKG_SKIP_SRC_CHECK=true
+TERMUX_PKG_SKIP_SRC_EXTRACT=true
+TERMUX_PKG_DEPENDS="zsh, git, figlet"
 
 termux_step_make_install() {
-    mkdir -p "$TERMUX_PREFIX/bin"
-    mkdir -p "$TERMUX_PREFIX/share/zyvora"
+    mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora"
 
     cat > "$TERMUX_PREFIX/bin/zyvora" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 set -e
 
-CYAN='\033[38;5;51m'
-PURPLE='\033[38;5;141m'
-RESET='\033[0m'
+THEME="$PREFIX/share/zyvora/theme.zsh"
+ZSHRC="$HOME/.zshrc"
+BACKUP="$HOME/.zshrc.zyvora-backup"
+MARKER="# ZYVORA TERMUX PACKAGE"
 
-printf "${PURPLE}ZYVORA ULTRA${RESET} ${CYAN}TERMUX${RESET}\n"
-printf "${CYAN}────────────────────────────────────${RESET}\n"
-printf "${PURPLE}Theme package: 1.0.0${RESET}\n\n"
+install_theme() {
+    if [ -f "$ZSHRC" ] && ! grep -Fq "$MARKER" "$ZSHRC"; then
+        cp "$ZSHRC" "$BACKUP"
+    fi
+    if ! grep -Fq "$MARKER" "$ZSHRC" 2>/dev/null; then
+        {
+            printf '\n%s\n' "$MARKER"
+            printf 'source "%s"\n' "$THEME"
+        } >> "$ZSHRC"
+    fi
+}
 
-if command -v zsh >/dev/null 2>&1; then
-    exec zsh
-fi
+remove_theme() {
+    if [ -f "$BACKUP" ]; then
+        cp "$BACKUP" "$ZSHRC"
+        rm -f "$BACKUP"
+        printf 'ZYVORA theme removed; original .zshrc restored.\n'
+    elif [ -f "$ZSHRC" ]; then
+        sed -i '/# ZYVORA TERMUX PACKAGE/d' "$ZSHRC"
+        sed -i '\|source .*share/zyvora/theme.zsh|d' "$ZSHRC"
+        printf 'ZYVORA theme lines removed.\n'
+    fi
+}
 
-printf "Zsh is not installed. Install it with: pkg install zsh\n"
+case "${1:-start}" in
+    install|start)
+        install_theme
+        printf '\033[38;5;141mZYVORA ULTRA\033[0m \033[38;5;51mTERMUX\033[0m\n'
+        printf '\033[38;5;51m────────────────────────────────────\033[0m\n'
+        exec zsh
+        ;;
+    remove|uninstall)
+        remove_theme
+        ;;
+    status)
+        if grep -Fq "$MARKER" "$ZSHRC" 2>/dev/null; then
+            printf 'ZYVORA theme: installed\n'
+        else
+            printf 'ZYVORA theme: not installed\n'
+        fi
+        ;;
+    *)
+        printf 'Usage: zyvora [start|install|remove|status]\n'
+        exit 2
+        ;;
+esac
 EOF
     chmod 755 "$TERMUX_PREFIX/bin/zyvora"
 
     cat > "$TERMUX_PREFIX/share/zyvora/theme.zsh" <<'EOF'
-# ZYVORA TERMUX theme
+# ZYVORA TERMUX PACKAGE THEME
 autoload -Uz colors && colors
 setopt PROMPT_SUBST
-
 export ZYVORA_THEME='ULTRA'
 
 function zyvora_git_branch() {
@@ -61,5 +98,10 @@ function zyvora_banner() {
 }
 
 PROMPT='%F{51}┌─[%f%F{141}ZYVORA%f@%F{51}TERMUX%f]%F{51}─[%f%F{141}%~%f%F{51}]%f$(zyvora_git_branch)\n%F{51}└─>%f '
+
+if [[ -z "$ZYVORA_SESSION_STARTED" ]]; then
+  export ZYVORA_SESSION_STARTED=1
+  zyvora_banner
+fi
 EOF
 }
