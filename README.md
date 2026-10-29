@@ -61,7 +61,7 @@ zyvora banner 1            # save giant ZYVORA wordmark
 zyvora banner 2            # save giant NAGI wordmark
 zyvora banner 37           # save a different layout/profile
 zyvora banner preview 24   # preview without changing saved selection
-zyvora banner list         # show banner command help
+zyvora banner list         # list all 102 banner designs
 ```
 
 Selection is saved in `~/.config/zyvora/banner`.
