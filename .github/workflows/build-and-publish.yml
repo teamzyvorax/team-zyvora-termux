@@ -13,6 +13,10 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  TERMUX_BUILD_DIR: termux-packages
+  SITE_DIR: site
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,39 +25,71 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Clone Termux package build system
-        run: git clone --depth 1 https://github.com/termux/termux-packages.git
+        run: git clone --depth 1 https://github.com/termux/termux-packages.git "$TERMUX_BUILD_DIR"
 
-      - name: Copy ZYVORA package recipe
+      - name: Copy ZYVORA package recipe and assets
         run: |
-          rm -rf termux-packages/packages/zyvora
-          mkdir -p termux-packages/packages/zyvora
-          cp packages/zyvora/build.sh termux-packages/packages/zyvora/build.sh
+          rm -rf "$TERMUX_BUILD_DIR/packages/zyvora"
+          mkdir -p "$TERMUX_BUILD_DIR/packages/zyvora"
+          cp -a packages/zyvora/. "$TERMUX_BUILD_DIR/packages/zyvora/"
 
-      - name: Build Termux package
+      - name: Build ZYVORA package in official Termux Docker environment
+        working-directory: ${{ env.TERMUX_BUILD_DIR }}
         run: |
-          docker pull ghcr.io/termux/package-builder
-          docker run --rm \
-            --security-opt seccomp=./termux-packages/scripts/profile.json \
-            --cap-add CAP_SYS_ADMIN \
-            --device /dev/fuse \
-            -v "$PWD/termux-packages:/home/builder/termux-packages" \
-            ghcr.io/termux/package-builder \
-            ./build-package.sh -I -o /home/builder/termux-packages/output zyvora
+          ./scripts/run-docker.sh ./build-package.sh -f -I zyvora
 
       - name: Build APT repository
+        shell: bash
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y apt-utils dpkg-dev
-          mkdir -p site/apt/pool/main/z/zyvora
-          mkdir -p site/apt/dists/stable/main/binary-all
-          cp termux-packages/output/zyvora_*.deb site/apt/pool/main/z/zyvora/
-          dpkg-scanpackages site/apt/pool/main /dev/null | gzip -9c > site/apt/dists/stable/main/binary-all/Packages.gz
-          apt-ftparchive release site/apt/dists/stable > site/apt/dists/stable/Release
-          cat > site/index.html <<'EOF'
-          <!doctype html>
-          <html><head><meta charset="utf-8"><title>ZYVORA TERMUX APT</title></head>
-          <body><h1>ZYVORA TERMUX APT</h1><p>Official package repository for Team Zyvora.</p></body></html>
+          sudo apt-get install -y apt-utils dpkg-dev gzip
+
+          rm -rf "$SITE_DIR"
+          mkdir -p "$SITE_DIR/apt/pool/main/z/zyvora"
+
+          shopt -s nullglob
+          debs=("$TERMUX_BUILD_DIR"/output/zyvora_*.deb)
+          if [ "${#debs[@]}" -eq 0 ]; then
+            echo "ERROR: no ZYVORA .deb was produced" >&2
+            find "$TERMUX_BUILD_DIR" -maxdepth 4 -type f -name '*.deb' -print >&2 || true
+            exit 1
+          fi
+          cp "${debs[@]}" "$SITE_DIR/apt/pool/main/z/zyvora/"
+
+          # Termux clients request architecture-specific indexes even when the
+          # package itself is Architecture: all. Publish the same all-package
+          # index at every supported Termux architecture path.
+          for arch in aarch64 arm i686 x86_64 all; do
+            mkdir -p "$SITE_DIR/apt/dists/stable/main/binary-$arch"
+            dpkg-scanpackages -a all "$SITE_DIR/apt/pool/main" /dev/null \
+              | gzip -9c > "$SITE_DIR/apt/dists/stable/main/binary-$arch/Packages.gz"
+            dpkg-scanpackages -a all "$SITE_DIR/apt/pool/main" /dev/null \
+              > "$SITE_DIR/apt/dists/stable/main/binary-$arch/Packages"
+          done
+
+          mkdir -p "$SITE_DIR/apt/dists/stable"
+          cat > "$SITE_DIR/apt/apt-ftparchive.conf" <<'EOF'
+          APT::FTPArchive::Release::Origin "Team Zyvora";
+          APT::FTPArchive::Release::Label "ZYVORA TERMUX";
+          APT::FTPArchive::Release::Suite "stable";
+          APT::FTPArchive::Release::Codename "stable";
+          APT::FTPArchive::Release::Architectures "aarch64 arm i686 x86_64 all";
+          APT::FTPArchive::Release::Components "main";
           EOF
+          apt-ftparchive -c="$SITE_DIR/apt/apt-ftparchive.conf" release "$SITE_DIR/apt/dists/stable" \
+            > "$SITE_DIR/apt/dists/stable/Release"
+
+          cat > "$SITE_DIR/index.html" <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZYVORA TERMUX APT</title></head>
+          <body><h1>ZYVORA TERMUX APT</h1><p>Official package repository for Team Zyvora.</p><p>Install with <code>pkg install zyvora</code>.</p></body>
+          </html>
+          EOF
+
+          echo "Published package files:"
+          find "$SITE_DIR/apt" -type f -maxdepth 6 -print | sort
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -61,7 +97,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: ${{ env.SITE_DIR }}
 
   deploy:
     needs: build
