@@ -2,11 +2,11 @@ TERMUX_PKG_HOMEPAGE=https://github.com/teamzyvorax/team-zyvora-termux
 TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk theme and terminal launcher for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
-TERMUX_PKG_VERSION=1.0.0
-TERMUX_PKG_REVISION=2
+TERMUX_PKG_VERSION=1.0.1
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
-TERMUX_PKG_DEPENDS="zsh, git, figlet"
+TERMUX_PKG_DEPENDS="zsh, git"
 
 termux_step_make_install() {
     mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora"
@@ -83,16 +83,12 @@ function zyvora_git_branch() {
 
 function zyvora_banner() {
   clear
-  if command -v figlet >/dev/null 2>&1; then
-    print -P '%F{51}'
-    figlet -f small 'ZYVORA'
-    print -P '%f'
-  else
-    print -P '%F{141}╔══════════════════════════════════╗%f'
-    print -P '%F{141}║          Z Y V O R A             ║%f'
-    print -P '%F{141}║        T E R M U X               ║%f'
-    print -P '%F{141}╚══════════════════════════════════╝%f'
-  fi
+  print -P '%F{51}'
+  print -P '╔══════════════════════════════════════╗'
+  print -P '║          Z Y V O R A                 ║'
+  print -P '║        U L T R A  T E R M U X        ║'
+  print -P '╚══════════════════════════════════════╝'
+  print -P '%f'
   print -P '%F{51}ZYVORA ULTRA TERMINAL%f'
   print -P ''
 }
