@@ -139,10 +139,10 @@ menu() {
     mkdir -p "$CONFIG_DIR"
     while true; do
         clear
-        printf '\\033[38;5;51m╔══════════════════════════════════════════╗\\033[0m\n'
-        printf '\\033[38;5;141m║       NAGI × ZYVORA ULTRA                ║\\033[0m\n'
-        printf '\\033[38;5;51m║             TERMUX CONTROL PANEL         ║\\033[0m\n'
-        printf '\\033[38;5;51m╠══════════════════════════════════════════╣\\033[0m\n'
+        printf '\033[38;5;51m╔══════════════════════════════════════════╗\033[0m\n'
+        printf '\033[38;5;141m║       NAGI × ZYVORA ULTRA                ║\033[0m\n'
+        printf '\033[38;5;51m║             TERMUX CONTROL PANEL         ║\033[0m\n'
+        printf '\033[38;5;51m╠══════════════════════════════════════════╣\033[0m\n'
         printf '  1. Choose terminal theme (28 styles)\n'
         printf '  2. Choose banner (1-102)\n'
         printf '  3. Preview banner\n'
@@ -151,7 +151,7 @@ menu() {
         printf '  6. Reset defaults\n'
         printf '  7. Uninstall theme\n'
         printf '  0. Exit menu\n'
-        printf '\\033[38;5;51m╚══════════════════════════════════════════╝\\033[0m\n'
+        printf '\033[38;5;51m╚══════════════════════════════════════════╝\033[0m\n'
         read -r -p 'Select option: ' choice
         case "$choice" in
             1)
