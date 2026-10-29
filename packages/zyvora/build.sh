@@ -135,7 +135,96 @@ normalize_style() {
     esac
 }
 
+menu() {
+    mkdir -p "$CONFIG_DIR"
+    while true; do
+        clear
+        printf '\\033[38;5;51m╔══════════════════════════════════════════╗\\033[0m\\n'
+        printf '\\033[38;5;141m║       NAGI × ZYVORA ULTRA                ║\\033[0m\\n'
+        printf '\\033[38;5;51m║             TERMUX CONTROL PANEL         ║\\033[0m\\n'
+        printf '\\033[38;5;51m╠══════════════════════════════════════════╣\\033[0m\\n'
+        printf '  1. Choose terminal theme (28 styles)\\n'
+        printf '  2. Choose banner (1-102)\\n'
+        printf '  3. Preview banner\\n'
+        printf '  4. Startup effects (full/light/off)\\n'
+        printf '  5. View current settings\\n'
+        printf '  6. Reset defaults\\n'
+        printf '  7. Uninstall theme\\n'
+        printf '  0. Exit menu\\n'
+        printf '\\033[38;5;51m╚══════════════════════════════════════════╝\\033[0m\\n'
+        read -r -p 'Select option: ' choice
+        case "$choice" in
+            1)
+                styles
+                read -r -p 'Enter style number (1-28): ' picked
+                picked_style="$(normalize_style "$picked")" || { printf 'Invalid style.\\n'; read -r -p 'Press Enter to continue...'; continue; }
+                printf '%s\\n' "$picked_style" > "$STYLE_FILE"
+                install_theme
+                printf 'Theme saved: %s\\n' "$picked_style"
+                read -r -p 'Press Enter to continue...'
+                ;;
+            2)
+                banner_list
+                read -r -p 'Enter banner 1-102 or random: ' picked
+                if [[ "$picked" == random ]]; then
+                    printf 'random\\n' > "$CONFIG_DIR/banner"
+                elif [[ "$picked" =~ ^[0-9]+$ ]] && (( picked >= 1 && picked <= 102 )); then
+                    printf '%s\\n' "$picked" > "$CONFIG_DIR/banner"
+                else
+                    printf 'Invalid banner choice.\\n'
+                fi
+                read -r -p 'Press Enter to continue...'
+                ;;
+            3)
+                read -r -p 'Preview banner number (1-102) or random: ' picked
+                if [[ "$picked" == random || ( "$picked" =~ ^[0-9]+$ && picked -ge 1 && picked -le 102 ) ]]; then
+                    ZYVORA_BANNER_CHOICE="$picked" zsh -c 'source "$PREFIX/share/zyvora/banners.zsh"; zyvora_render_banner'
+                else
+                    printf 'Invalid banner choice.\\n'
+                fi
+                read -r -p 'Press Enter to continue...'
+                ;;
+            4)
+                printf '1. Full effects\\n2. Light effects\\n3. Off\\n'
+                read -r -p 'Choose effects: ' picked
+                case "$picked" in
+                    1) printf 'full\\n' > "$EFFECTS_FILE";;
+                    2) printf 'light\\n' > "$EFFECTS_FILE";;
+                    3) printf 'off\\n' > "$EFFECTS_FILE";;
+                    *) printf 'Invalid choice.\\n';;
+                esac
+                read -r -p 'Press Enter to continue...'
+                ;;
+            5)
+                printf '\\nTheme: '; cat "$STYLE_FILE" 2>/dev/null || printf 'zyvora-ultra (default)\\n'
+                printf 'Banner: '; cat "$CONFIG_DIR/banner" 2>/dev/null || printf 'random (default)\\n'
+                printf 'Effects: '; cat "$EFFECTS_FILE" 2>/dev/null || printf 'full (default)\\n'
+                if grep -Fq "$MARKER" "$ZSHRC" 2>/dev/null; then printf 'Installation: active\\n'; else printf 'Installation: not active\\n'; fi
+                read -r -p 'Press Enter to continue...'
+                ;;
+            6)
+                printf 'zyvora-ultra\\n' > "$STYLE_FILE"
+                printf 'random\\n' > "$CONFIG_DIR/banner"
+                printf 'full\\n' > "$EFFECTS_FILE"
+                install_theme
+                printf 'Defaults restored. Restart the shell to apply.\\n'
+                read -r -p 'Press Enter to continue...'
+                ;;
+            7)
+                read -r -p 'Uninstall theme and restore backed-up .zshrc? Type YES: ' confirm
+                if [[ "$confirm" == YES ]]; then remove_theme; fi
+                read -r -p 'Press Enter to continue...'
+                ;;
+            0|q|Q) return 0;;
+            *) printf 'Invalid option.\\n'; sleep 1;;
+        esac
+    done
+}
+
 case "${1:-start}" in
+    menu|--menu|-m)
+        menu
+        ;;
     styles|list)
         styles
         ;;
@@ -211,7 +300,7 @@ case "${1:-start}" in
         fi
         ;;
     *)
-        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>|banner <1-102|random|list|preview N>|effects <full|light|off>]\n'
+        printf 'Usage: zyvora [menu|start|install|remove|status|styles|style <1-28|name>|banner <1-102|random|list|preview N>|effects <full|light|off>]\n'
         exit 2
         ;;
 esac
