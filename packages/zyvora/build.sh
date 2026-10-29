@@ -295,7 +295,6 @@ zyvora_boot_sequence() {
 zyvora_banner() {
   clear
   zyvora_boot_sequence
-  clear
   zyvora_render_banner
   print -P "%F{$ZYVORA_C2}[*] STYLE: $ZYVORA_STYLE%f"
   print
