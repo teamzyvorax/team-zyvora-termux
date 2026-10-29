@@ -13,11 +13,11 @@ typeset -ga ZYVORA_BANNER_MARKS
 ZYVORA_BANNER_MARKS=("[+]" "[*]" "[✓]" "[NET]" "[AI]" "[NAGI]" "[ULTRA]" "[CORE]" "[SYS]" "[OK]")
 
 zyvora_render_banner() {
-  local choice="\\\${ZYVORA_BANNER_CHOICE:-$(cat "$HOME/.config/zyvora/banner" 2>/dev/null || printf random)}"
+  local choice="${ZYVORA_BANNER_CHOICE:-$(cat "$HOME/.config/zyvora/banner" 2>/dev/null || printf random)}"
   local id layout variant title color mark now host cwd
   now="$(date +%H:%M:%S 2>/dev/null || printf 'TIME')"
-  host="\\\${USER:-nagi}@termux"
-  cwd="\\\${PWD/#$HOME/~}"
+  host="${USER:-nagi}@termux"
+  cwd="${PWD/#$HOME/~}"
   if [[ "$choice" == random || -z "$choice" ]]; then
     id=$(( (RANDOM % 102) + 1 ))
   elif [[ "$choice" == <-> ]] && (( choice >= 1 && choice <= 102 )); then
@@ -59,9 +59,9 @@ zyvora_render_banner() {
   # Ten structurally different layouts, combined with ten identities/motifs.
   layout=$(( (id - 3) % 10 ))
   variant=$(( (id - 3) / 10 ))
-  title="\\\${ZYVORA_BANNER_NAMES[$((variant + 1))]}"
-  color="\\\${ZYVORA_BANNER_COLORS[$((variant + 1))]}"
-  mark="\\\${ZYVORA_BANNER_MARKS[$((variant + 1))]}"
+  title="${ZYVORA_BANNER_NAMES[$((variant + 1))]}"
+  color="${ZYVORA_BANNER_COLORS[$((variant + 1))]}"
+  mark="${ZYVORA_BANNER_MARKS[$((variant + 1))]}"
   case "$layout" in
     0)
       print -P "%F{$color}╔══════════════════════════════════════════╗"
@@ -129,4 +129,3 @@ zyvora_render_banner() {
   print
 }
 
-zyvora_render_banner
