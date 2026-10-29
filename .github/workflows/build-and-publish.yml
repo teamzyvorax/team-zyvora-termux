@@ -1,0 +1,75 @@
+name: Build and publish ZYVORA APT repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/zyvora/**'
+      - '.github/workflows/build-and-publish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ZYVORA
+        uses: actions/checkout@v6
+
+      - name: Clone Termux package build system
+        run: git clone --depth 1 https://github.com/termux/termux-packages.git
+
+      - name: Copy ZYVORA package recipe
+        run: |
+          rm -rf termux-packages/packages/zyvora
+          mkdir -p termux-packages/packages/zyvora
+          cp packages/zyvora/build.sh termux-packages/packages/zyvora/build.sh
+
+      - name: Build Termux package
+        run: |
+          docker pull ghcr.io/termux/package-builder
+          docker run --rm \
+            --security-opt seccomp=./termux-packages/scripts/profile.json \
+            --cap-add CAP_SYS_ADMIN \
+            --device /dev/fuse \
+            -v "$PWD/termux-packages:/home/builder/termux-packages" \
+            ghcr.io/termux/package-builder \
+            ./build-package.sh -I -o /home/builder/termux-packages/output zyvora
+
+      - name: Build APT repository
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils dpkg-dev
+          mkdir -p site/apt/pool/main/z/zyvora
+          mkdir -p site/apt/dists/stable/main/binary-all
+          cp termux-packages/output/zyvora_*.deb site/apt/pool/main/z/zyvora/
+          dpkg-scanpackages site/apt/pool/main /dev/null | gzip -9c > site/apt/dists/stable/main/binary-all/Packages.gz
+          apt-ftparchive release site/apt/dists/stable > site/apt/dists/stable/Release
+          cat > site/index.html <<'EOF'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><title>ZYVORA TERMUX APT</title></head>
+          <body><h1>ZYVORA TERMUX APT</h1><p>Official package repository for Team Zyvora.</p></body></html>
+          EOF
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy APT repository
+        id: deployment
+        uses: actions/deploy-pages@v4
