@@ -1,23 +1,20 @@
 TERMUX_PKG_HOMEPAGE=https://github.com/teamzyvorax/team-zyvora-termux
-TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk theme and terminal launcher for Termux"
+TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk terminal theme and 28 selectable styles for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
-TERMUX_PKG_VERSION=1.0.1
-TERMUX_PKG_REVISION=2
+TERMUX_PKG_VERSION=1.1.0
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
 TERMUX_PKG_DEPENDS="zsh, git"
 
-# This package has no upstream source archive. The Termux license installer
-# searches TERMUX_PKG_SRCDIR, so explicitly create the source tree and place
-# the package's MIT license there.
 termux_step_get_source() {
     mkdir -p "$TERMUX_PKG_SRCDIR"
     cp "$TERMUX_PKG_BUILDER_DIR/LICENSE" "$TERMUX_PKG_SRCDIR/LICENSE"
 }
 
 termux_step_make_install() {
-    mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora"
+    mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora" "$TERMUX_PREFIX/etc/zyvora"
 
     cat > "$TERMUX_PREFIX/bin/zyvora" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
@@ -26,9 +23,46 @@ set -e
 THEME="$PREFIX/share/zyvora/theme.zsh"
 ZSHRC="$HOME/.zshrc"
 BACKUP="$HOME/.zshrc.zyvora-backup"
+CONFIG_DIR="$HOME/.config/zyvora"
+STYLE_FILE="$CONFIG_DIR/style"
 MARKER="# ZYVORA TERMUX PACKAGE"
 
+styles() {
+    cat <<'LIST'
+1  classic-hacker
+2  matrix
+3  cyber-neon
+4  purple-void
+5  red-alert
+6  electric-storm
+7  orange-cyber
+8  skull-terminal
+9  pixel-hacker
+10 cyber-satellite
+11 digital-core
+12 security-console
+13 dark-ops
+14 network-grid
+15 retro-dos
+16 ghost-green
+17 blue-protocol
+18 quantum-purple
+19 inferno
+20 galaxy-terminal
+21 ai-core
+22 machine-mode
+23 lab-terminal
+24 cyber-web
+25 crt-hacker
+26 watcher
+27 ultra-boot
+28 zyvora-ultra
+LIST
+}
+
 install_theme() {
+    mkdir -p "$CONFIG_DIR"
+    [ -f "$STYLE_FILE" ] || printf 'zyvora-ultra\n' > "$STYLE_FILE"
     if [ -f "$ZSHRC" ] && ! grep -Fq "$MARKER" "$ZSHRC"; then
         cp "$ZSHRC" "$BACKUP"
     fi
@@ -52,11 +86,54 @@ remove_theme() {
     fi
 }
 
+normalize_style() {
+    case "$1" in
+        1|classic|hacker|classic-hacker) echo classic-hacker;;
+        2|matrix) echo matrix;;
+        3|cyber|cyber-neon) echo cyber-neon;;
+        4|purple|purple-void) echo purple-void;;
+        5|red|red-alert) echo red-alert;;
+        6|storm|electric-storm) echo electric-storm;;
+        7|orange|orange-cyber) echo orange-cyber;;
+        8|skull|skull-terminal) echo skull-terminal;;
+        9|pixel|pixel-hacker) echo pixel-hacker;;
+        10|satellite|cyber-satellite) echo cyber-satellite;;
+        11|digital|digital-core) echo digital-core;;
+        12|security|security-console) echo security-console;;
+        13|ops|dark-ops) echo dark-ops;;
+        14|network|network-grid) echo network-grid;;
+        15|dos|retro-dos) echo retro-dos;;
+        16|ghost|ghost-green) echo ghost-green;;
+        17|blue|blue-protocol) echo blue-protocol;;
+        18|quantum|quantum-purple) echo quantum-purple;;
+        19|inferno) echo inferno;;
+        20|galaxy|galaxy-terminal) echo galaxy-terminal;;
+        21|ai|ai-core) echo ai-core;;
+        22|machine|machine-mode) echo machine-mode;;
+        23|lab|lab-terminal) echo lab-terminal;;
+        24|web|cyber-web) echo cyber-web;;
+        25|crt|crt-hacker) echo crt-hacker;;
+        26|watcher) echo watcher;;
+        27|boot|ultra-boot) echo ultra-boot;;
+        28|ultra|zyvora-ultra) echo zyvora-ultra;;
+        *) return 1;;
+    esac
+}
+
 case "${1:-start}" in
+    styles|list)
+        styles
+        ;;
+    style)
+        install_theme
+        [ -n "${2:-}" ] || { printf 'Current style: '; cat "$STYLE_FILE"; printf '\nUse: zyvora style <1-28|name>\n'; exit 0; }
+        NEW_STYLE="$(normalize_style "$2")" || { printf 'Unknown style. Run: zyvora styles\n'; exit 2; }
+        printf '%s\n' "$NEW_STYLE" > "$STYLE_FILE"
+        printf 'ZYVORA style set to: %s\n' "$NEW_STYLE"
+        exec zsh
+        ;;
     install|start)
         install_theme
-        printf '\033[38;5;141mZYVORA ULTRA\033[0m \033[38;5;51mTERMUX\033[0m\n'
-        printf '\033[38;5;51m────────────────────────────────────\033[0m\n'
         exec zsh
         ;;
     remove|uninstall)
@@ -65,12 +142,13 @@ case "${1:-start}" in
     status)
         if grep -Fq "$MARKER" "$ZSHRC" 2>/dev/null; then
             printf 'ZYVORA theme: installed\n'
+            printf 'Style: '; cat "$STYLE_FILE" 2>/dev/null || printf 'zyvora-ultra\n'
         else
             printf 'ZYVORA theme: not installed\n'
         fi
         ;;
     *)
-        printf 'Usage: zyvora [start|install|remove|status]\n'
+        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>]\n'
         exit 2
         ;;
 esac
@@ -78,30 +156,69 @@ EOF
     chmod 755 "$TERMUX_PREFIX/bin/zyvora"
 
     cat > "$TERMUX_PREFIX/share/zyvora/theme.zsh" <<'EOF'
-# ZYVORA TERMUX PACKAGE THEME
+# ZYVORA ULTRA 28-STYLE TERMUX THEME
+# Visual-only terminal customization; normal Termux commands remain unchanged.
 autoload -Uz colors && colors
 setopt PROMPT_SUBST
-export ZYVORA_THEME='ULTRA'
 
-function zyvora_git_branch() {
-  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
-  local branch=$(git branch --show-current 2>/dev/null)
-  [[ -n "$branch" ]] && print " %F{141}[$branch]%f"
+ZYVORA_CONFIG="$HOME/.config/zyvora/style"
+ZYVORA_STYLE="$(cat "$ZYVORA_CONFIG" 2>/dev/null || printf 'zyvora-ultra')"
+
+zyvora_style_data() {
+  ZYVORA_C1=51; ZYVORA_C2=141; ZYVORA_SYMBOL='⚡'; ZYVORA_TITLE='ZYVORA ULTRA'
+  case "$ZYVORA_STYLE" in
+    classic-hacker) ZYVORA_C1=46; ZYVORA_C2=226; ZYVORA_SYMBOL='[+]'; ZYVORA_TITLE='HACKER';;
+    matrix) ZYVORA_C1=46; ZYVORA_C2=40; ZYVORA_SYMBOL='[M]'; ZYVORA_TITLE='MATRIX';;
+    cyber-neon) ZYVORA_C1=51; ZYVORA_C2=45; ZYVORA_SYMBOL='[C]'; ZYVORA_TITLE='CYBER NEON';;
+    purple-void) ZYVORA_C1=141; ZYVORA_C2=135; ZYVORA_SYMBOL='[V]'; ZYVORA_TITLE='PURPLE VOID';;
+    red-alert) ZYVORA_C1=196; ZYVORA_C2=202; ZYVORA_SYMBOL='[!]'; ZYVORA_TITLE='RED ALERT';;
+    electric-storm) ZYVORA_C1=51; ZYVORA_C2=39; ZYVORA_SYMBOL='[~]'; ZYVORA_TITLE='ELECTRIC STORM';;
+    orange-cyber) ZYVORA_C1=208; ZYVORA_C2=214; ZYVORA_SYMBOL='[>]'; ZYVORA_TITLE='ORANGE CYBER';;
+    skull-terminal) ZYVORA_C1=255; ZYVORA_C2=196; ZYVORA_SYMBOL='[X]'; ZYVORA_TITLE='SKULL TERMINAL';;
+    pixel-hacker) ZYVORA_C1=46; ZYVORA_C2=226; ZYVORA_SYMBOL='[8]'; ZYVORA_TITLE='PIXEL HACKER';;
+    cyber-satellite) ZYVORA_C1=39; ZYVORA_C2=51; ZYVORA_SYMBOL='[S]'; ZYVORA_TITLE='CYBER SATELLITE';;
+    digital-core) ZYVORA_C1=51; ZYVORA_C2=213; ZYVORA_SYMBOL='[D]'; ZYVORA_TITLE='DIGITAL CORE';;
+    security-console) ZYVORA_C1=46; ZYVORA_C2=51; ZYVORA_SYMBOL='[SEC]'; ZYVORA_TITLE='SECURITY CONSOLE';;
+    dark-ops) ZYVORA_C1=250; ZYVORA_C2=244; ZYVORA_SYMBOL='[OPS]'; ZYVORA_TITLE='DARK OPS';;
+    network-grid) ZYVORA_C1=45; ZYVORA_C2=51; ZYVORA_SYMBOL='[NET]'; ZYVORA_TITLE='NETWORK GRID';;
+    retro-dos) ZYVORA_C1=46; ZYVORA_C2=255; ZYVORA_SYMBOL='[DOS]'; ZYVORA_TITLE='RETRO DOS';;
+    ghost-green) ZYVORA_C1=118; ZYVORA_C2=46; ZYVORA_SYMBOL='[G]'; ZYVORA_TITLE='GHOST GREEN';;
+    blue-protocol) ZYVORA_C1=39; ZYVORA_C2=33; ZYVORA_SYMBOL='[P]'; ZYVORA_TITLE='BLUE PROTOCOL';;
+    quantum-purple) ZYVORA_C1=141; ZYVORA_C2=213; ZYVORA_SYMBOL='[Q]'; ZYVORA_TITLE='QUANTUM PURPLE';;
+    inferno) ZYVORA_C1=196; ZYVORA_C2=208; ZYVORA_SYMBOL='[F]'; ZYVORA_TITLE='INFERNO';;
+    galaxy-terminal) ZYVORA_C1=51; ZYVORA_C2=135; ZYVORA_SYMBOL='[*]'; ZYVORA_TITLE='GALAXY TERMINAL';;
+    ai-core) ZYVORA_C1=51; ZYVORA_C2=141; ZYVORA_SYMBOL='[AI]'; ZYVORA_TITLE='AI CORE';;
+    machine-mode) ZYVORA_C1=250; ZYVORA_C2=208; ZYVORA_SYMBOL='[MCH]'; ZYVORA_TITLE='MACHINE MODE';;
+    lab-terminal) ZYVORA_C1=118; ZYVORA_C2=51; ZYVORA_SYMBOL='[LAB]'; ZYVORA_TITLE='LAB TERMINAL';;
+    cyber-web) ZYVORA_C1=45; ZYVORA_C2=213; ZYVORA_SYMBOL='[WEB]'; ZYVORA_TITLE='CYBER WEB';;
+    crt-hacker) ZYVORA_C1=46; ZYVORA_C2=82; ZYVORA_SYMBOL='[CRT]'; ZYVORA_TITLE='CRT HACKER';;
+    watcher) ZYVORA_C1=51; ZYVORA_C2=196; ZYVORA_SYMBOL='[EYE]'; ZYVORA_TITLE='WATCHER';;
+    ultra-boot) ZYVORA_C1=51; ZYVORA_C2=226; ZYVORA_SYMBOL='[BOOT]'; ZYVORA_TITLE='ULTRA BOOT';;
+  esac
 }
 
-function zyvora_banner() {
+zyvora_git_branch() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
+  local branch=$(git branch --show-current 2>/dev/null)
+  [[ -n "$branch" ]] && print " %F{$ZYVORA_C2}[$branch]%f"
+}
+
+zyvora_banner() {
   clear
-  print -P '%F{51}'
-  print -P '╔══════════════════════════════════════╗'
-  print -P '║          Z Y V O R A                 ║'
-  print -P '║        U L T R A  T E R M U X        ║'
-  print -P '╚══════════════════════════════════════╝'
+  print -P "%F{$ZYVORA_C1}"
+  print -P '╔══════════════════════════════════════════╗'
+  print -P "║              $ZYVORA_TITLE              ║"
+  print -P '║          Z Y V O R A   U L T R A         ║'
+  print -P '╚══════════════════════════════════════════╝'
   print -P '%f'
-  print -P '%F{51}ZYVORA ULTRA TERMINAL%f'
+  print -P "%F{$ZYVORA_C2}$ZYVORA_SYMBOL  Coded by Team Zyvora  $ZYVORA_SYMBOL%f"
+  print -P "%F{$ZYVORA_C1}[+] SYSTEM: ONLINE   [✓] TERMINAL: READY%f"
+  print -P "%F{$ZYVORA_C2}[*] STYLE: $ZYVORA_STYLE%f"
   print -P ''
 }
 
-PROMPT='%F{51}┌─[%f%F{141}ZYVORA%f@%F{51}TERMUX%f]%F{51}─[%f%F{141}%~%f%F{51}]%f$(zyvora_git_branch)\n%F{51}└─>%f '
+zyvora_style_data
+PROMPT="%F{$ZYVORA_C1}┌─[%f%F{$ZYVORA_C2}$ZYVORA_SYMBOL ZYVORA%f@%F{$ZYVORA_C1}TERMUX%f]%F{$ZYVORA_C1}─[%f%F{$ZYVORA_C2}%~%f%F{$ZYVORA_C1}]%f\$(zyvora_git_branch)\n%F{$ZYVORA_C1}└─>%f "
 
 if [[ -z "$ZYVORA_SESSION_STARTED" ]]; then
   export ZYVORA_SESSION_STARTED=1
