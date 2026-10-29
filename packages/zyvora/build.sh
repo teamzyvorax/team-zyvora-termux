@@ -1,8 +1,8 @@
 TERMUX_PKG_HOMEPAGE=https://github.com/teamzyvorax/team-zyvora-termux
-TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk terminal theme and 28 selectable styles for Termux"
+TERMUX_PKG_DESCRIPTION="ZYVORA cyberpunk terminal theme with 28 themes and 102 randomized banner designs for Termux"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Team Zyvora"
-TERMUX_PKG_VERSION=1.1.0
+TERMUX_PKG_VERSION=1.2.0
 TERMUX_PKG_REVISION=1
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
@@ -11,10 +11,12 @@ TERMUX_PKG_DEPENDS="zsh, git"
 termux_step_get_source() {
     mkdir -p "$TERMUX_PKG_SRCDIR"
     cp "$TERMUX_PKG_BUILDER_DIR/LICENSE" "$TERMUX_PKG_SRCDIR/LICENSE"
+    cp "$TERMUX_PKG_BUILDER_DIR/banners.zsh" "$TERMUX_PKG_SRCDIR/banners.zsh"
 }
 
 termux_step_make_install() {
     mkdir -p "$TERMUX_PREFIX/bin" "$TERMUX_PREFIX/share/zyvora" "$TERMUX_PREFIX/etc/zyvora"
+    install -m 644 "$TERMUX_PKG_SRCDIR/banners.zsh" "$TERMUX_PREFIX/share/zyvora/banners.zsh"
 
     cat > "$TERMUX_PREFIX/bin/zyvora" <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
@@ -139,16 +141,47 @@ case "${1:-start}" in
     remove|uninstall)
         remove_theme
         ;;
+    banner)
+        BANNER_FILE="$CONFIG_DIR/banner"
+        mkdir -p "$CONFIG_DIR"
+        case "${2:-status}" in
+            list|styles)
+                printf '102 banner designs: 01-02 giant ASCII banners; 03-102 unique layout/motif combinations.\n'
+                printf 'Use: zyvora banner <1-102|random>\n'
+                ;;
+            random)
+                printf 'random\n' > "$BANNER_FILE"
+                printf 'Random banner selected for each new shell.\n'
+                ;;
+            status)
+                printf 'Banner selection: '; cat "$BANNER_FILE" 2>/dev/null || printf 'random (default)\n'
+                ;;
+            preview)
+                [ -n "${3:-}" ] || { printf 'Use: zyvora banner preview <1-102|random>\n'; exit 2; }
+                ZYVORA_PREVIEW=1 ZYVORA_BANNER_CHOICE="$3" zsh -c 'source "$PREFIX/share/zyvora/theme.zsh"; zyvora_banner'
+                ;;
+            [0-9]*)
+                [[ "$2" =~ ^[0-9]+$ ]] && [ "$2" -ge 1 ] && [ "$2" -le 102 ] || { printf 'Banner number must be 1-102.\n'; exit 2; }
+                printf '%s\n' "$2" > "$BANNER_FILE"
+                printf 'Banner %s selected. Start a new shell with: zyvora\n' "$2"
+                ;;
+            *)
+                printf 'Use: zyvora banner <1-102|random|list|preview N>\n'
+                exit 2
+                ;;
+        esac
+        ;;
     status)
         if grep -Fq "$MARKER" "$ZSHRC" 2>/dev/null; then
             printf 'ZYVORA theme: installed\n'
             printf 'Style: '; cat "$STYLE_FILE" 2>/dev/null || printf 'zyvora-ultra\n'
+            printf 'Banner: '; cat "$CONFIG_DIR/banner" 2>/dev/null || printf 'random (default)\n'
         else
             printf 'ZYVORA theme: not installed\n'
         fi
         ;;
     *)
-        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>]\n'
+        printf 'Usage: zyvora [start|install|remove|status|styles|style <1-28|name>|banner <1-102|random|list|preview N>]\n'
         exit 2
         ;;
 esac
@@ -203,18 +236,13 @@ zyvora_git_branch() {
   [[ -n "$branch" ]] && print " %F{$ZYVORA_C2}[$branch]%f"
 }
 
+source "$PREFIX/share/zyvora/banners.zsh"
+
 zyvora_banner() {
   clear
-  print -P "%F{$ZYVORA_C1}"
-  print -P '╔══════════════════════════════════════════╗'
-  print -P "║              $ZYVORA_TITLE              ║"
-  print -P '║          Z Y V O R A   U L T R A         ║'
-  print -P '╚══════════════════════════════════════════╝'
-  print -P '%f'
-  print -P "%F{$ZYVORA_C2}$ZYVORA_SYMBOL  Coded by Team Zyvora  $ZYVORA_SYMBOL%f"
-  print -P "%F{$ZYVORA_C1}[+] SYSTEM: ONLINE   [✓] TERMINAL: READY%f"
+  zyvora_render_banner
   print -P "%F{$ZYVORA_C2}[*] STYLE: $ZYVORA_STYLE%f"
-  print -P ''
+  print
 }
 
 zyvora_style_data
