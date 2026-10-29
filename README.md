@@ -1,6 +1,6 @@
 # ZYVORA TERMUX
 
-A ZYVORA ULTRA cyberpunk terminal theme packaged as a real Termux `.deb` package.
+A NAGI × ZYVORA ULTRA cyberpunk terminal theme packaged as a real Termux `.deb` package, with 28 color themes and 102 banner designs (including two giant ASCII wordmarks).
 
 ## Install
 
@@ -50,10 +50,26 @@ zyvora style zyvora-ultra
 
 The selected style is saved in `~/.config/zyvora/style` and survives new Termux sessions.
 
+## 102 banner designs
+
+The first two banners are large ASCII wordmarks. The remaining 100 designs use 10 distinct layouts combined with 10 identity/color/motif profiles. The default is random on each new shell.
+
+```bash
+zyvora banner             # show saved selection (random by default)
+zyvora banner random      # random banner every new shell
+zyvora banner 1            # save giant ZYVORA wordmark
+zyvora banner 2            # save giant NAGI wordmark
+zyvora banner 37           # save a different layout/profile
+zyvora banner preview 24   # preview without changing saved selection
+zyvora banner list         # show banner command help
+```
+
+Selection is saved in `~/.config/zyvora/banner`.
+
 ## UI features
 
 - Old-school hacker / pixel terminal aesthetic
-- Custom ZYVORA ULTRA ASCII banner
+- 102 banner designs: 2 giant wordmarks + 100 layout/profile combinations
 - 28 color + layout profiles
 - Neon green, cyan, yellow, purple, red and blue variants
 - Timestamp-ready status layout
@@ -67,7 +83,10 @@ The selected style is saved in `~/.config/zyvora/style` and survives new Termux 
 
 ```bash
 zyvora                 # start / activate
-zyvora styles          # show all 28 styles
+zyvora styles          # show all 28 color themes
+zyvora banner random   # random banner on each new shell
+zyvora banner 1        # select a banner by number
+zyvora banner preview 24 # preview a banner
 zyvora style <name>    # switch style
 zyvora style <1-28>    # switch by number
 zyvora status          # check installation + selected style
