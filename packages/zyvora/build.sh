@@ -158,7 +158,7 @@ case "${1:-start}" in
                 ;;
             preview)
                 [ -n "${3:-}" ] || { printf 'Use: zyvora banner preview <1-102|random>\n'; exit 2; }
-                ZYVORA_PREVIEW=1 ZYVORA_BANNER_CHOICE="$3" zsh -c 'source "$PREFIX/share/zyvora/theme.zsh"; zyvora_banner'
+                ZYVORA_BANNER_CHOICE="$3" zsh -c 'source "$PREFIX/share/zyvora/banners.zsh"; zyvora_render_banner'
                 ;;
             [0-9]*)
                 [[ "$2" =~ ^[0-9]+$ ]] && [ "$2" -ge 1 ] && [ "$2" -le 102 ] || { printf 'Banner number must be 1-102.\n'; exit 2; }
