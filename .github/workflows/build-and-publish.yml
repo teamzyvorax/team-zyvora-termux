@@ -66,16 +66,18 @@ jobs:
           fi
           cp "${debs[@]}" "$SITE_DIR/apt/pool/main/z/zyvora/"
 
+          # Generate Packages from the APT repository root so filenames are
+          # relative (pool/main/...) instead of incorrectly including site/apt/.
+          cd "$SITE_DIR/apt"
           for arch in aarch64 arm i686 x86_64 all; do
-            mkdir -p "$SITE_DIR/apt/dists/stable/main/binary-$arch"
-            dpkg-scanpackages -a all "$SITE_DIR/apt/pool/main" /dev/null \
-              | gzip -9c > "$SITE_DIR/apt/dists/stable/main/binary-$arch/Packages.gz"
-            dpkg-scanpackages -a all "$SITE_DIR/apt/pool/main" /dev/null \
-              > "$SITE_DIR/apt/dists/stable/main/binary-$arch/Packages"
+            mkdir -p "dists/stable/main/binary-$arch"
+            dpkg-scanpackages -a all pool/main /dev/null \
+              | gzip -9c > "dists/stable/main/binary-$arch/Packages.gz"
+            dpkg-scanpackages -a all pool/main /dev/null \
+              > "dists/stable/main/binary-$arch/Packages"
           done
 
-          mkdir -p "$SITE_DIR/apt/dists/stable"
-          cat > "$SITE_DIR/apt/apt-ftparchive.conf" <<'EOF'
+          cat > apt-ftparchive.conf <<'EOF'
           APT::FTPArchive::Release::Origin "Team Zyvora";
           APT::FTPArchive::Release::Label "ZYVORA TERMUX";
           APT::FTPArchive::Release::Suite "stable";
@@ -83,9 +85,14 @@ jobs:
           APT::FTPArchive::Release::Architectures "aarch64 arm i686 x86_64 all";
           APT::FTPArchive::Release::Components "main";
           EOF
-          apt-ftparchive -c="$SITE_DIR/apt/apt-ftparchive.conf" release "$SITE_DIR/apt/dists/stable" \
-            > "$SITE_DIR/apt/dists/stable/Release"
+          apt-ftparchive -c=apt-ftparchive.conf release dists/stable > dists/stable/Release
 
+          echo "Published package files:"
+          find . -type f -maxdepth 6 -print | sort
+          echo "===== APT PACKAGE PATH CHECK ====="
+          grep -h '^Filename:' dists/stable/main/binary-*/Packages | sort -u
+
+          cd "$GITHUB_WORKSPACE"
           cat > "$SITE_DIR/index.html" <<'EOF'
           <!doctype html>
           <html lang="en">
@@ -93,9 +100,6 @@ jobs:
           <body><h1>ZYVORA TERMUX APT</h1><p>Official package repository for Team Zyvora.</p><p>Install with <code>pkg install zyvora</code>.</p></body>
           </html>
           EOF
-
-          echo "Published package files:"
-          find "$SITE_DIR/apt" -type f -maxdepth 6 -print | sort
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
